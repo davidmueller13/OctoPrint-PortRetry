@@ -1,6 +1,3 @@
-# coding=utf-8
-from __future__ import absolute_import
-
 import threading
 import serial
 
@@ -38,9 +35,8 @@ class PortRetryPlugin(octoprint.plugin.StartupPlugin,
 					  octoprint.plugin.TemplatePlugin,
 					  octoprint.plugin.SettingsPlugin):
 	def on_after_startup(self, *args, **kwargs):
-		self._logger.info(f"Port Retry {repr(args)} {repr(kwargs)}")
-
 		interval = self._settings.get_float(['interval'], min=0.1)
+		self._logger.info(f"PortRetry starting with interval {interval}")
 		self.__timer = _RepeatedTimer(interval, self.do_auto_connect)
 
 	def on_shutdown(self, *args, **kwargs):
@@ -60,7 +56,7 @@ class PortRetryPlugin(octoprint.plugin.StartupPlugin,
 				ser0 = serial.Serial(port)
 				portopen = ser0.is_open
 			except: 
-				self._logger.info(f"Failed to open port {port}")				
+				self._logger.debug(f"Failed to open port {port}")				
 			if portopen:
 				self._logger.info(f"Attempting to connect to {port} with profile {profile}")
 				self._printer.connect(port=port, profile=profile)
@@ -76,7 +72,7 @@ class PortRetryPlugin(octoprint.plugin.StartupPlugin,
 	def get_update_information(self, *args, **kwargs):
 		return dict(
 			portretry=dict(
-				displayName='PortRetry',
+				displayName=self._plugin_name,
 				displayVersion=self._plugin_version,
 
 				# use github release method of version check
@@ -86,7 +82,7 @@ class PortRetryPlugin(octoprint.plugin.StartupPlugin,
 				current=self._plugin_version,
 
 				# update method: pip
-				pip='https://github.com/vehystrix/OctoPrint-PortRetry/archive/{target_version}.zip'
+				pip='https://github.com/vehystrix/OctoPrint-PortRetry/archive/{target}.zip'
 			)
 		)
 
@@ -104,7 +100,7 @@ class PortRetryPlugin(octoprint.plugin.StartupPlugin,
 
 
 __plugin_name__ = 'PortRetry'
-__plugin_pythoncompat__ = '>=2.7,<4'
+__plugin_pythoncompat__ = '>=3,<4'
 
 def __plugin_load__():
 	global __plugin_implementation__

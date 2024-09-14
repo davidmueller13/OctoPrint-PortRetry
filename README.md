@@ -4,9 +4,12 @@ When the printer is disconnected, this plugin will try to reconnect the printer 
 
 Comes in handy when running octoprint in an lxc, and the port device is available even if the printer is not connected. In this case PortLister will not work, to connect to the printer when it comes online
 
+Should also work to solve the issue with Prusa printers that don't remove the serial port from the system when powering down
+
 ## Setup
 
-Install using this URL:
+Install via the bundled [Plugin Manager](https://plugins.octoprint.org/)
+or manually using this URL:
 
     https://github.com/vehystrix/OctoPrint-PortRetry/archive/master.zip
 
