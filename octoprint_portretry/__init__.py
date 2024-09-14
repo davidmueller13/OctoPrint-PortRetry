@@ -85,18 +85,14 @@ class PortRetryPlugin(octoprint.plugin.StartupPlugin,
 			self.__start_timer()
 
 	def on_event(self, event: str, payload: dict):
-		octoprint.plugin.EventHandlerPlugin.on_event(self, event, payload)
-
 		if not hasattr(self, '_timer'): return # only occurs during server startup
 
-
-		match event:
-			case 'Connected':
-				self._logger.info('Printer connected, stopping timer')
-				self.__stop_timer()
-			case 'Disconnected':
-				self._logger.info('Printer disconnected, starting timer')
-				self.__start_timer()
+		if 'Connected' == event:
+			self._logger.info('Printer connected, stopping timer')
+			self.__stop_timer()
+		elif 'Disconnected' == event:
+			self._logger.info('Printer disconnected, starting timer')
+			self.__start_timer()
 
 
 __plugin_name__ = 'PortRetry'
