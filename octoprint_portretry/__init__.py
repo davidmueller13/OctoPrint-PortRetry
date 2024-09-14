@@ -1,46 +1,33 @@
-import threading
 import serial
 
 import octoprint.plugin
-from octoprint.util import get_exception_string
-
-# https://stackoverflow.com/a/13151299
-class _RepeatedTimer:
-	def __init__(self, interval: float, function, *args, **kwargs):
-		self._timer     = None
-		self.interval   = interval
-		self.function   = function
-		self.args       = args
-		self.kwargs     = kwargs
-		self.is_running = False
-		self.start()
-
-	def _run(self):
-		self.is_running = False
-		self.start()
-		self.function(*self.args, **self.kwargs)
-
-	def start(self):
-		if not self.is_running:
-			self._timer = threading.Timer(self.interval, self._run)
-			self._timer.start()
-			self.is_running = True
-
-	def stop(self):
-		self._timer.cancel()
-		self.is_running = False
+from octoprint.util import get_exception_string, RepeatedTimer
 
 class PortRetryPlugin(octoprint.plugin.StartupPlugin,
 					  octoprint.plugin.AssetPlugin,
 					  octoprint.plugin.TemplatePlugin,
-					  octoprint.plugin.SettingsPlugin):
+					  octoprint.plugin.SettingsPlugin,
+					  octoprint.plugin.EventHandlerPlugin):
+	def __init__(self):
+		super().__init__()
+
 	def on_after_startup(self, *args, **kwargs):
-		interval = self._settings.get_float(['interval'], min=0.1)
-		self._logger.info(f"PortRetry starting with interval {interval}")
-		self.__timer = _RepeatedTimer(interval, self.do_auto_connect)
+		self._logger.info(f"PortRetry starting with interval {self.__get_interval()}")
+		
+		if not self._printer.is_closed_or_error(): self.__start_timer()
+
+	def __get_interval(self) -> float:
+		return self._settings.get_float(['interval'], min=0.1)
+	def __create_timer(self):
+		self._timer = RepeatedTimer(self.__get_interval(), self.do_auto_connect)
+	def __start_timer(self):
+		self.__create_timer()
+		self._timer.start()
+	def __stop_timer(self):
+		self._timer.cancel()
 
 	def on_shutdown(self, *args, **kwargs):
-		self.__timer.stop()
+		self._timer.cancel()
 
 	def do_auto_connect(self, *args, **kwargs):
 		try:
@@ -77,7 +64,7 @@ class PortRetryPlugin(octoprint.plugin.StartupPlugin,
 
 				# use github release method of version check
 				type='github_release',
-				user='VEhystrix',
+				user='vehystrix',
 				repo='OctoPrint-PortRetry',
 				current=self._plugin_version,
 
@@ -94,9 +81,22 @@ class PortRetryPlugin(octoprint.plugin.StartupPlugin,
 		new_interval = self._settings.get_float(['interval'], min=0.1)
 		if interval != new_interval:
 			self._logger.info(f"Retry interval changed to {new_interval}")
-			self.__timer.stop()
-			self.__timer.interval = new_interval
-			self.__timer.start()
+			self.__stop_timer()
+			self.__start_timer()
+
+	def on_event(self, event: str, payload: dict):
+		octoprint.plugin.EventHandlerPlugin.on_event(self, event, payload)
+
+		if not hasattr(self, '_timer'): return # only occurs during server startup
+
+
+		match event:
+			case 'Connected':
+				self._logger.info('Printer connected, stopping timer')
+				self.__stop_timer()
+			case 'Disconnected':
+				self._logger.info('Printer disconnected, starting timer')
+				self.__start_timer()
 
 
 __plugin_name__ = 'PortRetry'

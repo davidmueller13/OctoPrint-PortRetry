@@ -106,4 +106,4 @@ Comes in handy when running octoprint in an lxc, and the port device is availabl
 
 Should also work to solve the issue with Prusa printers that don't remove the serial port from the system when powering down
 
-Caveats: only tested on OctoPrint 1.10.4, python 3 and on linux
+Caveats: only tested on OctoPrint 1.10.2, python 3 and on linux
