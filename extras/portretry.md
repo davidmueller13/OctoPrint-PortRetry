@@ -8,7 +8,7 @@ author: VEhystrix
 license: AGPLv3
 
 # today's date in format YYYY-MM-DD
-date: 2024-09-14
+date: 2024-09-15
 
 homepage: https://github.com/vehystrix/OctoPrint-PortRetry
 source: https://github.com/vehystrix/OctoPrint-PortRetry
@@ -107,3 +107,20 @@ Comes in handy when running octoprint in an lxc, and the port device is availabl
 Should also work to solve the issue with Prusa printers that don't remove the serial port from the system when powering down
 
 Caveats: only tested on OctoPrint 1.10.2, python 3 and on linux
+
+## Configuration
+
+In ~/.octoprint/config.yaml, the interval can be configured to something other than the default 5 seconds.
+There is also a settings page in the webui
+```
+plugins:
+  portretry:
+    interval: 5
+```
+
+**This plugin will do nothing if the serial port in Serial Connection > General is set to `AUTO`, you will need to specify a port there for this plugin to work!** Or in ~/.octoprint/config.yaml:
+```
+serial:
+  port: /dev/ttyUSB0
+```
+When you change the port from `AUTO` to something else, you will need to connect to the printer manually first (or restart the server).

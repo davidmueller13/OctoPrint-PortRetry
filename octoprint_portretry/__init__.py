@@ -10,37 +10,65 @@ class PortRetryPlugin(octoprint.plugin.StartupPlugin,
 					  octoprint.plugin.EventHandlerPlugin):
 	def __init__(self):
 		super().__init__()
-
-	def on_after_startup(self, *args, **kwargs):
-		self._logger.info(f"PortRetry starting with interval {self.__get_interval()}")
-		
-		if not self._printer.is_closed_or_error(): self.__start_timer()
-
-	def __get_interval(self) -> float:
-		return self._settings.get_float(['interval'], min=0.1)
+	def __timer_condition(self):
+		if (self._settings.global_get(["serial", "port"]) in [None, "AUTO"]) \
+			or (not self._printer.is_closed_or_error()):
+			return False
+		return True
+	def __timer_cancelled(self):
+		self._timer = None
 	def __create_timer(self):
-		self._timer = RepeatedTimer(self.__get_interval(), self.do_auto_connect)
+		if (not hasattr(self, '_timer')) or (self._timer is None):
+			self._timer = RepeatedTimer(self.__get_interval(), \
+							            self.do_auto_connect, \
+										condition=self.__timer_condition, \
+										on_finish=self.__timer_cancelled)
 	def __start_timer(self):
 		self.__create_timer()
 		self._timer.start()
 	def __stop_timer(self):
-		self._timer.cancel()
+		if self._timer: self._timer.cancel()
+	
+	def on_event(self, event: str, payload: dict):
+		if not hasattr(self, '_timer'): return # only occurs during server startup
+
+		if 'Connected' == event:
+			self._logger.info('Printer connected, stopping timer')
+			self.__stop_timer()
+		elif 'Disconnected' == event:
+			self._logger.info('Printer disconnected, starting timer')
+			self.__start_timer()
+
+	def on_after_startup(self, *args, **kwargs):
+		self._logger.info(f"PortRetry starting with interval {self.__get_interval()}")
+		self.__start_timer()
 
 	def on_shutdown(self, *args, **kwargs):
-		self._timer.cancel()
+		self.__stop_timer()
+
+	def __get_interval(self) -> float:
+		return self._settings.get_float(['interval'], min=0.1)
 
 	def do_auto_connect(self, *args, **kwargs):
 		try:
+			port = self._settings.global_get(["serial", "port"])
+			if port in [None, "AUTO"]: return
+
 			printer_profile = self._printer_profile_manager.get_default()
 			profile = printer_profile['id'] if 'id' in printer_profile else '_default'
 			if not self._printer.is_closed_or_error():
 				#self._logger.info('Not autoconnecting; printer already connected')
 				return
-			port = self._settings.get(['port'])
+			baudrate = self._settings.global_get_int(["serial", "baudrate"])
 			portopen = False
 			# try the serial port
 			try:
-				ser0 = serial.Serial(port)
+				if type(baudrate) == int:
+					self._logger.debug(f"using baudrate {baudrate}")
+					ser0 = serial.Serial(port, baudrate)
+				else:
+					self._logger.debug('using default baudrate')
+					ser0 = serial.Serial(port)
 				portopen = ser0.is_open
 			except: 
 				self._logger.debug(f"Failed to open port {port}")				
@@ -51,7 +79,7 @@ class PortRetryPlugin(octoprint.plugin.StartupPlugin,
 			self._logger.error(f"Exception in do_auto_connect {get_exception_string()}")
 
 	def get_settings_defaults(self, *args, **kwargs):
-		return dict(interval=5.0, port='/dev/ttyUSB0')
+		return dict(interval=5.0)
 
 	def get_assets(self, *args, **kwargs):
 		return dict(js=['js/portretry.js'])
@@ -84,15 +112,6 @@ class PortRetryPlugin(octoprint.plugin.StartupPlugin,
 			self.__stop_timer()
 			self.__start_timer()
 
-	def on_event(self, event: str, payload: dict):
-		if not hasattr(self, '_timer'): return # only occurs during server startup
-
-		if 'Connected' == event:
-			self._logger.info('Printer connected, stopping timer')
-			self.__stop_timer()
-		elif 'Disconnected' == event:
-			self._logger.info('Printer disconnected, starting timer')
-			self.__start_timer()
 
 
 __plugin_name__ = 'PortRetry'

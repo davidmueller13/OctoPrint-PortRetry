@@ -21,8 +21,15 @@ There is also a settings page in the webui
 plugins:
   portretry:
     interval: 5
-    port: /dev/ttyUSB0
 ```
+
+**This plugin will do nothing if the serial port in Serial Connection > General is set to `AUTO`, you will need to specify a port there for this plugin to work!** Or in ~/.octoprint/config.yaml:
+```
+serial:
+  port: /dev/ttyUSB0
+```
+When you change the port from `AUTO` to something else, you will need to connect to the printer manually first (or restart the server).
+
 ## Misc
 
 To keep your printer working without having to reboot the lxc every time you turn it on, I'm putting what I found here so that it may be of use for someone.

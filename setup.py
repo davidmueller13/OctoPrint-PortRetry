@@ -5,7 +5,7 @@
 plugin_identifier = "portretry"
 plugin_package = "octoprint_portretry"
 plugin_name = "OctoPrint-PortRetry"
-plugin_version = "0.1.3"
+plugin_version = "0.1.4"
 plugin_description = """PortRetry retries the serial connection when the printer disconnects"""
 plugin_author = "vehystrix"
 plugin_author_email = "vehystrix@gmail.com"
